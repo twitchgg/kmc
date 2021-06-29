@@ -113,7 +113,8 @@ func (s *Server) GenerateCertificateRequest(ctx context.Context,
 	csrTemplate := &x509.CertificateRequest{
 		Subject:            pkixName,
 		SignatureAlgorithm: x509.SHA512WithRSA,
-		Extensions:         exs,
+		// Extensions:         exs,
+		ExtraExtensions: exs,
 	}
 	if req.DnsNames != nil && len(req.DnsNames) > 0 {
 		csrTemplate.DNSNames = req.DnsNames
