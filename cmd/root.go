@@ -30,9 +30,7 @@ var rootCmd = &cobra.Command{
 	Short: "TSA KMC",
 	Run: func(cmd *cobra.Command, args []string) {
 		ccmd.InitGlobalVars(true)
-		if err := ccmd.ValidateStringVar(&kmcEnvs.rpcCertPath, "rpc_cert_path", true); err != nil {
-			logrus.WithField("prefix", "kmc").Fatalf("validate var failed: %s", err.Error())
-		}
+		ccmd.ValidateStringVar(&kmcEnvs.rpcCertPath, "rpc_cert_path", true)
 		if err := ccmd.ValidateStringVar(&kmcEnvs.kmcPath, "kmc_path", true); err != nil {
 			logrus.WithField("prefix", "kmc").Fatalf("validate var failed: %s", err.Error())
 		}
@@ -41,14 +39,17 @@ var rootCmd = &cobra.Command{
 			logrus.WithField("prefix", "kmc").Fatalf("validate var failed: %s", err.Error())
 		}
 		ccmd.SetEnvBoolV(&kmcEnvs.kmcReset, "kmc_reset")
-		certRoot, err := filepath.Abs(kmcEnvs.rpcCertPath)
-		if err != nil {
-			logrus.WithField("prefix", "kmc").
-				Fatalf("lookup certificate root path failed: %s", err.Error())
+		if kmcEnvs.rpcCertPath != "" {
+			certRoot, err := filepath.Abs(kmcEnvs.rpcCertPath)
+			if err != nil {
+				logrus.WithField("prefix", "kmc").
+					Fatalf("lookup certificate root path failed: %s", err.Error())
+			}
+			ccmd.ServerEnvs.TrustedPath = certRoot + "/kmc_trusted.crt"
+			ccmd.ServerEnvs.CertPath = certRoot + "/kmc_server.crt"
+			ccmd.ServerEnvs.PrivkeyPath = certRoot + "/kmc_server.key"
+			logrus.WithField("prefix", "kmc").Info("no TLS KMC server")
 		}
-		ccmd.ServerEnvs.TrustedPath = certRoot + "/kmc_trusted.crt"
-		ccmd.ServerEnvs.CertPath = certRoot + "/kmc_server.crt"
-		ccmd.ServerEnvs.PrivkeyPath = certRoot + "/kmc_server.key"
 		ccmd.InitBindAddr()
 		if err := ccmd.InitEtcd(
 			ccmd.GlobalEnvs.EtcdAddr, "/run/kmc-server", initKMC); err != nil {
@@ -69,17 +70,19 @@ func initKMC(r *registry.Registry) *registry.NodeStatusEntry {
 	var trusted, cert, privkey []byte
 	var s *kmc.Server
 	var err error
-	if trusted, err = ioutil.ReadFile(ccmd.ServerEnvs.TrustedPath); err != nil {
-		logrus.WithField("prefix", "kmc").
-			Fatalf("read kmc server trusted certificate failed: %s", err.Error())
-	}
-	if cert, err = ioutil.ReadFile(ccmd.ServerEnvs.CertPath); err != nil {
-		logrus.WithField("prefix", "kmc").
-			Fatalf("read kmc server certificate failed: %s", err.Error())
-	}
-	if privkey, err = ioutil.ReadFile(ccmd.ServerEnvs.PrivkeyPath); err != nil {
-		logrus.WithField("prefix", "kmc").
-			Fatalf("read kmc server private key failed: %s", err.Error())
+	if kmcEnvs.rpcCertPath != "" {
+		if trusted, err = ioutil.ReadFile(ccmd.ServerEnvs.TrustedPath); err != nil {
+			logrus.WithField("prefix", "kmc").
+				Fatalf("read kmc server trusted certificate failed: %s", err.Error())
+		}
+		if cert, err = ioutil.ReadFile(ccmd.ServerEnvs.CertPath); err != nil {
+			logrus.WithField("prefix", "kmc").
+				Fatalf("read kmc server certificate failed: %s", err.Error())
+		}
+		if privkey, err = ioutil.ReadFile(ccmd.ServerEnvs.PrivkeyPath); err != nil {
+			logrus.WithField("prefix", "kmc").
+				Fatalf("read kmc server private key failed: %s", err.Error())
+		}
 	}
 	if s, err = kmc.NewServer(&rpc.ServerConfig{
 		TrustedCert:      trusted,
@@ -96,11 +99,8 @@ func initKMC(r *registry.Registry) *registry.NodeStatusEntry {
 	}
 	errChan := s.Start()
 	go func() {
-		select {
-		case err := <-errChan:
-			logrus.WithField("prefix", "kmc").
-				Fatalf("start kmc server failed: %s", err.Error())
-		}
+		logrus.WithField("prefix", "kmc").
+			Fatalf("start kmc server failed: %s", <-errChan)
 	}()
 
 	port := strings.Split(kmcEnvs.rpcBindAddr, ":")[1]

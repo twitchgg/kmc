@@ -19,7 +19,7 @@ import (
 )
 
 func tc(t *testing.T) center.KMCServiceClient {
-	certPath, err := filepath.Abs("../../data/certs")
+	certPath, err := filepath.Abs("../../tsa/data/certs/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +42,11 @@ func tc(t *testing.T) center.KMCServiceClient {
 		CACert:     trusted,
 		Cert:       cert,
 		PrivKey:    privKey,
-		ServerName: "kmc.proxzone.com",
+		ServerName: "kmc.ntsc.ac.cn",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	conn, err := rpc.DialRPCConn(&rpc.DialOptions{
 		RemoteAddr: "tcp://127.0.0.1:1357",
 		TLSConfig:  tlsConf,
@@ -110,13 +113,17 @@ func TestKMCCreateCA(t *testing.T) {
 	c := tc(t)
 	reply, err := c.GenerateCertificateRequest(context.Background(), &center.CSRRequest{
 		PkixName: &center.PKIXName{
-			Country:      "CN",
-			Province:     "Beijing",
-			Locality:     "Beijing",
-			Organization: "Cyberspace Administration of China",
-			CommonName:   "Cyberspace Administration of China Root CA",
+			Country: "CN",
+			// Province:     "Beijing",
+			Province: "Shanxi",
+			// Locality:     "Beijing",
+			Locality: "Xian",
+			// Organization: "Cyberspace Administration of China",
+			Organization: "National Time Service Center,Chinese Academy of Sciences",
+			// CommonName:   "Cyberspace Administration of China Root CA",
+			CommonName: "Cheng du cdleadus common view data service client",
 		},
-		FriendlyName: "网信办根CA",
+		FriendlyName: "中科院国家授时中心根CA",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -147,40 +154,38 @@ func TestKMCCreateCert(t *testing.T) {
 	r1, err := c.GenerateCertificateRequest(context.Background(), &center.CSRRequest{
 		PkixName: &center.PKIXName{
 			Country:            "CN",
-			Province:           "SHANXI",
-			Locality:           "XIAN",
+			Province:           "Shanxi",
+			Locality:           "Xian",
 			Organization:       "NTSC",
 			OrganizationalUnit: "NTSC",
-			// CommonName:         "s1.service.cv.ntsc.ac.cn",
-			CommonName: "NTSC Common View User Service Test Cert 2",
+			CommonName:         "dev1 time card certificate",
+			// CommonName:         "TA Dev service sub root certificate",
 		},
-		// DnsNames: []string{
-		// 	// "10.10.10.210",
-		// 	"s1.service.cv.ntsc.ac.cn",
-		// 	"ta.ntsc.ac.cn",
-		// },
-		// FriendlyName: "电商讯通TA服务节点客户端证书",
-		FriendlyName: "NTSC 卫星共视用户服务客户端测试证书2",
-		// Extensions: []*center.X509Extension{
-		// 	{
-		// 		Id:    []int32{1, 1, 1, 1, 1, 1},
-		// 		Value: []byte("1,2,3,4"),
-		// 	},
-		// 	{
-		// 		Id:    []int32{1, 1, 1, 1, 1, 2},
-		// 		Value: []byte("other"),
-		// 	},
-		// },
+		DnsNames: []string{
+			// "10.10.10.210",
+			// "s1.snmp.ntsc.ac.cn",
+			// "kmc.ntsc.ac.cn",
+			// "s1.cv.ntsc.ac.cn",
+			// "ntsc.ac.cn",
+			// "dev1.restry.ta.ntsc.ac.cn",
+		},
+		FriendlyName: "TA开发用授时卡证书1",
+		// FriendlyName: "成都同相科技有限公司",
+		Extensions: []*center.X509Extension{
+			{
+				Id:    []int32{1, 1, 1, 1, 1, 1},
+				Value: []byte("9fc8df9ee6d3156d2e18cc0a6088d6cf"),
+			},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.GenerateCertificate(context.Background(), &center.CertRequest{
 		Cmcsr: r1.Cmcsr,
-		Scmc:  "000000019",
-		// Scmc: "00000006",
-		// IsCA: true,
-		Days: 365,
+		Scmc:  "00000002",
+		IsCA:  false,
+		Days:  365 * 5,
 		KeyUsage: []center.KeyUsage{
 			center.KeyUsage_KeyUsageDigitalSignature,
 			center.KeyUsage_KeyUsageCertSign,
@@ -209,7 +214,7 @@ func TestKMCTrustedChain(t *testing.T) {
 	s := tc(t)
 	reply, err := s.GetTrustedChainBundle(context.Background(),
 		&center.IDRequest{
-			Id: "00000035",
+			Id: "00000006",
 		})
 	if err != nil {
 		t.Fatal(err)

@@ -20,7 +20,6 @@ import (
 
 // Server TSA KMC gRPC server
 type Server struct {
-	rpcConf   *rpc.ServerConfig
 	rpcServer *rpc.Server
 	ks        *storage.KMCStorage
 }
@@ -57,6 +56,8 @@ func (s *Server) certCheckFunc(ctx context.Context) (context.Context, error) {
 	pr, _ := peer.FromContext(ctx)
 	fmt.Println(pr.Addr.String())
 	switch info := pr.AuthInfo.(type) {
+	case nil:
+		return ctx, nil
 	case credentials.TLSInfo:
 		if len(info.State.PeerCertificates) == 0 {
 			return nil, status.Error(codes.Unauthenticated, "no certificate")
