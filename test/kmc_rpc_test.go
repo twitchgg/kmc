@@ -158,7 +158,7 @@ func TestKMCCreateCert(t *testing.T) {
 			Locality:           "Xian",
 			Organization:       "NTSC",
 			OrganizationalUnit: "NTSC",
-			CommonName:         "dev1 time card certificate",
+			CommonName:         "dev1 main clock device certificate",
 			// CommonName:         "TA Dev service sub root certificate",
 		},
 		DnsNames: []string{
@@ -169,12 +169,12 @@ func TestKMCCreateCert(t *testing.T) {
 			// "ntsc.ac.cn",
 			// "dev1.restry.ta.ntsc.ac.cn",
 		},
-		FriendlyName: "TA开发用授时卡证书1",
+		FriendlyName: "TA开发用主站主钟证书1",
 		// FriendlyName: "成都同相科技有限公司",
 		Extensions: []*center.X509Extension{
 			{
 				Id:    []int32{1, 1, 1, 1, 1, 1},
-				Value: []byte("9fc8df9ee6d3156d2e18cc0a6088d6cf"),
+				Value: []byte("628585523e9f9cea5eeaba0b6088d6cf"),
 			},
 		},
 	})
@@ -214,7 +214,7 @@ func TestKMCTrustedChain(t *testing.T) {
 	s := tc(t)
 	reply, err := s.GetTrustedChainBundle(context.Background(),
 		&center.IDRequest{
-			Id: "00000006",
+			Id: "00000008",
 		})
 	if err != nil {
 		t.Fatal(err)
